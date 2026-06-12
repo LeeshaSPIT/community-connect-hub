@@ -220,6 +220,7 @@ export default function App() {
       ratingsCount: 1,
       endorsements: 1,
       isVerified: false,
+      isUserSuggested: true,
       isPendingApproval: true,
       reviews: [
         {
@@ -309,7 +310,7 @@ export default function App() {
   };
 
   // Filter user suggested contributors only
-  const userSuggestedContacts = contacts.filter(c => c.isUserSuggested);
+  const userSuggestedContacts = contacts.filter(c => c.isUserSuggested || c.isPendingApproval);
 
   // Render onboarding / role-selection page if not onboarded
   if (!isOnboarded) {
