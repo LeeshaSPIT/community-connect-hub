@@ -120,17 +120,16 @@ export default function App() {
           c.subcategory !== 'सोसायटी वॉच आणि युक्त्या'
         );
 
-      const merged = [...INITIAL_CONTACTS];
-      firebaseContacts.forEach(fc => {
-        const idx = merged.findIndex(c => c.id === fc.id);
-        if (idx === -1) {
-          // New contact from Firebase — add it
-          merged.push(fc);
-        } else {
-          // Existing contact — fully override with Firebase version
-          merged[idx] = { ...merged[idx], ...fc };
-        }
+      const baseIds = new Set(INITIAL_CONTACTS.map(c => c.id));
+      // Start with firebase versions of base contacts, merged with base defaults
+      const merged = INITIAL_CONTACTS.map(base => {
+        const fb = firebaseContacts.find(fc => fc.id === base.id);
+        return fb ? { ...base, ...fb } : base;
       });
+      // Add user-suggested contacts (not in base)
+      firebaseContacts
+        .filter(fc => !baseIds.has(fc.id))
+        .forEach(fc => merged.push(fc));
       setContacts(merged);
     });
 
