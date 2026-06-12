@@ -58,13 +58,13 @@ export default function ContributeTab({
       category,
       subcategory,
       phone,
-      whatsapp: whatsapp || undefined,
+      whatsapp: whatsapp || "", // FIX: Empty string instead of undefined
       hours,
-      address: address || undefined,
+      address: address || "",   // FIX: Empty string instead of undefined
       details: details || `Provider of ${subcategory} services in our block. Contact for appointments.`,
       whatsappEnabled: !!whatsapp,
       isUserSuggested: true,
-      image: image || undefined
+      image: image || ""        // FIX: Empty string instead of undefined
     });
 
     // Reset Form

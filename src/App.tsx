@@ -233,22 +233,21 @@ export default function App() {
       ]
     };
 
-    try {
-      // 1. Try to save to Firebase
-      await setDoc(doc(db, 'contacts', fullContact.id), fullContact);
-      
-      // 2. If it succeeds, show it on the screen
-      setContacts(prev => [fullContact, ...prev]);
-      alert("Success! Suggestion saved to the database.");
-    } catch (error) {
-      // 3. If it fails, pop up an alert telling us why
-      console.error("Firebase Critical Error:", error);
-      alert("Database error! Check your Vercel Environment Variables or Firebase Rules.");
-    }
-  };
+    // FIX: A bulletproof filter that strips out ANY undefined values before Firebase sees them
+    const safeFirestoreData = Object.fromEntries(
+      Object.entries(fullContact).filter(([_, value]) => value !== undefined)
+    );
 
-    await setDoc(doc(db, 'contacts', fullContact.id), fullContact);
-    setContacts(prev => [fullContact, ...prev]);
+    try {
+      // Save the cleaned data to Firebase
+      await setDoc(doc(db, 'contacts', fullContact.id), safeFirestoreData);
+      
+      // Update the local screen
+      setContacts(prev => [fullContact, ...prev]);
+    } catch (error) {
+      console.error("Firebase save failed:", error);
+      alert("Database error! Could not save suggestion.");
+    }
   };
 
   // Trigger outbound dialed call simulation
