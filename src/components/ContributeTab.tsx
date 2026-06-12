@@ -29,6 +29,7 @@ export default function ContributeTab({
 
   // Status flags
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Added submission state
 
   // File to base64 conversion
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,36 +50,46 @@ export default function ContributeTab({
     'personal': ['Beauty Parlour', 'Barber', 'Laundry & Dhobi', 'Maid & Housekeeping', 'Home Helpers', 'Pet Care', 'Car Wash', 'Raddiwala (Scrap)']
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  // Changed to an async submission lock handler
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !subcategory.trim() || !phone.trim()) return;
+    if (!name.trim() || !subcategory.trim() || !phone.trim() || isSubmitting) return;
 
-    onAddContact({
-      name,
-      category,
-      subcategory,
-      phone,
-      whatsapp: whatsapp || "", // FIX: Empty string instead of undefined
-      hours,
-      address: address || "",   // FIX: Empty string instead of undefined
-      details: details || `Provider of ${subcategory} services in our block. Contact for appointments.`,
-      whatsappEnabled: !!whatsapp,
-      isUserSuggested: true,
-      image: image || ""        // FIX: Empty string instead of undefined
-    });
+    setIsSubmitting(true);
 
-    // Reset Form
-    setName('');
-    setSubcategory('');
-    setPhone('');
-    setWhatsapp('');
-    setAddress('');
-    setDetails('');
-    setImage('');
-    setIsSuccess(true);
+    try {
+      // Wait for the parent Firestore operation to finish saving
+      await onAddContact({
+        name,
+        category,
+        subcategory,
+        phone,
+        whatsapp: whatsapp || undefined,
+        hours,
+        address: address || undefined,
+        details: details || `Provider of ${subcategory} services in our block. Contact for appointments.`,
+        whatsappEnabled: !!whatsapp,
+        isUserSuggested: true,
+        image: image || undefined
+      });
 
-    // Auto dismiss congratulations after 4 sec
-    setTimeout(() => setIsSuccess(false), 5000);
+      // Reset Form fields cleanly
+      setName('');
+      setSubcategory('');
+      setPhone('');
+      setWhatsapp('');
+      setAddress('');
+      setDetails('');
+      setImage('');
+      setIsSuccess(true);
+
+      // Auto dismiss congratulations after 5 sec
+      setTimeout(() => setIsSuccess(false), 5000);
+    } catch (err) {
+      console.error("Form submission encountered an error: ", err);
+    } finally {
+      setIsSubmitting(false); // Release lockout
+    }
   };
 
   return (
@@ -316,12 +327,20 @@ export default function ContributeTab({
             />
           </div>
 
+          {/* Updated Button to follow submission states */}
           <button 
             type="submit"
-            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-widest transition-colors shadow-sm mt-2 cursor-pointer flex items-center justify-center space-x-1.5"
+            disabled={isSubmitting}
+            className={`w-full text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-widest transition-colors shadow-sm mt-2 flex items-center justify-center space-x-1.5 ${
+              isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700 cursor-pointer'
+            }`}
           >
-            <span>{TRANSLATIONS[language]['contrib.submit'] || "Register Contact Suggested info"}</span>
-            <ArrowRight size={13} />
+            <span>
+              {isSubmitting 
+                ? (language === 'mr' ? 'नोंदणी होत आहे...' : 'Registering...') 
+                : (TRANSLATIONS[language]['contrib.submit'] || "Register Contact Suggested info")}
+            </span>
+            {!isSubmitting && <ArrowRight size={13} />}
           </button>
 
         </form>

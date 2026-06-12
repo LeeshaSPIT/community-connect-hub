@@ -212,9 +212,14 @@ export default function App() {
 
   // 3. User registers a suggested provider contact (Crowdsourcing)
   const handleAddContact = async (newContactData: Omit<Contact, 'id' | 'rating' | 'ratingsCount' | 'endorsements' | 'reviews' | 'isVerified'>) => {
+    // Generate a deterministic stable ID using the phone number and partial name
+    const sanitizedPhone = newContactData.phone.replace(/[^0-9]/g, '');
+    const cleanName = newContactData.name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
+    const stableId = `usr-suggest-${cleanName}-${sanitizedPhone}`;
+
     const fullContact: Contact = {
       ...newContactData,
-      id: `usr-suggest-${Date.now()}`,
+      id: stableId, // Use the new stable ID here
       rating: 5.0,
       ratingsCount: 1,
       endorsements: 1,
@@ -243,7 +248,11 @@ export default function App() {
       await setDoc(doc(db, 'contacts', fullContact.id), safeFirestoreData);
       
       // Update the local screen
-      setContacts(prev => [fullContact, ...prev]);
+      setContacts(prev => {
+        // Prevent local state duplication if it's already in the list
+        if (prev.some(c => c.id === fullContact.id)) return prev;
+        return [fullContact, ...prev];
+      });
     } catch (error) {
       console.error("Firebase save failed:", error);
       alert("Database error! Could not save suggestion.");
