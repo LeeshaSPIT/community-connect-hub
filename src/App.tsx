@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { db } from './firebase';
+import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { INITIAL_CONTACTS } from './data';
 import { Contact, NeighborhoodSetting, Review } from './types';
 import HomeTab from './components/HomeTab';
@@ -103,64 +105,51 @@ export default function App() {
     }
   }, [neighborhood]);
 
-  // Load initial dataset, merging with LocalStorage for flawless state retention
+
+  // Load initial dataset, merging with Firebase for shared state
   useEffect(() => {
-    const storedContacts = localStorage.getItem('community_connect_contacts');
+    const unsubscribe = onSnapshot(collection(db, 'contacts'), (snapshot) => {
+      const firebaseContacts: Contact[] = snapshot.docs
+        .map(doc => doc.data() as Contact)
+        .filter(c =>
+          c.subcategory !== 'Society Watch & Utilities' &&
+          c.subcategory !== 'सोसायटी वॉच आणि युक्त्या'
+        );
+
+      const merged = [...INITIAL_CONTACTS];
+      firebaseContacts.forEach(fc => {
+        if (!merged.some(c => c.id === fc.id)) {
+          merged.push(fc);
+        } else {
+          const idx = merged.findIndex(c => c.id === fc.id);
+          merged[idx] = {
+            ...merged[idx],
+            endorsements: Math.max(merged[idx].endorsements || 0, fc.endorsements || 0),
+            reviews: [...merged[idx].reviews, ...(fc.reviews || []).filter(r => !merged[idx].reviews.some(fr => fr.id === r.id))]
+          };
+        }
+      });
+      setContacts(merged);
+    });
+
     const storedSetting = localStorage.getItem('community_connect_setting');
-
-    if (storedContacts) {
-      try {
-        const parsed = JSON.parse(storedContacts) as Contact[];
-        const upgraded: Contact[] = [];
-
-        parsed.forEach((stored: Contact) => {
-          // Completely remove any Society Watch & Utilities from client-side local cache
-          if (stored.subcategory === 'Society Watch & Utilities' || stored.subcategory === 'सोसायटी वॉच आणि युक्त्या') {
-            return;
-          }
-
-          const fresh = INITIAL_CONTACTS.find(c => c.id === stored.id);
-          if (fresh) {
-            upgraded.push({
-              ...fresh,
-              endorsements: Math.max(stored.endorsements || 0, fresh.endorsements || 0),
-              reviews: [...fresh.reviews, ...(stored.reviews || []).filter(r => !fresh.reviews.some(fr => fr.id === r.id))]
-            });
-          } else if (stored.id.startsWith('usr-suggest-')) {
-            upgraded.push(stored);
-          }
-        });
-
-        INITIAL_CONTACTS.forEach((fresh: Contact) => {
-          if (!upgraded.some(c => c.id === fresh.id)) {
-            upgraded.push(fresh);
-          }
-        });
-
-        setContacts(upgraded);
-        localStorage.setItem('community_connect_contacts', JSON.stringify(upgraded));
-      } catch (e) {
-        setContacts(INITIAL_CONTACTS);
-      }
-    } else {
-      setContacts(INITIAL_CONTACTS);
-      localStorage.setItem('community_connect_contacts', JSON.stringify(INITIAL_CONTACTS));
-    }
-
     if (storedSetting) {
       try {
-        const parsed = JSON.parse(storedSetting);
-        setNeighborhood(parsed);
-      } catch (e) {
-        // Fallback
-      }
+        setNeighborhood(JSON.parse(storedSetting));
+      } catch (e) {}
     }
+
+    return () => unsubscribe();
   }, []);
 
   // Save changes to localStorage on updating contacts list
-  const updateAndStoreContacts = (newsList: Contact[]) => {
+  const updateAndStoreContacts = async (newsList: Contact[]) => {
     setContacts(newsList);
-    localStorage.setItem('community_connect_contacts', JSON.stringify(newsList));
+    // Save only user-suggested contacts to Firebase
+    const userContacts = newsList.filter(c => c.id.startsWith('usr-suggest-'));
+    for (const contact of userContacts) {
+      await setDoc(doc(db, 'contacts', contact.id), contact);
+    }
   };
 
   const handleUpdateNeighborhood = (setting: NeighborhoodSetting) => {
