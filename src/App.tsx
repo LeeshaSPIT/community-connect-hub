@@ -143,11 +143,9 @@ export default function App() {
   }, []);
 
   // Save changes to localStorage on updating contacts list
-  const updateAndStoreContacts = async (newsList: Contact[]) => {
+    const updateAndStoreContacts = async (newsList: Contact[]) => {
     setContacts(newsList);
-    // Save only user-suggested contacts to Firebase
-    const userContacts = newsList.filter(c => c.id.startsWith('usr-suggest-'));
-    for (const contact of userContacts) {
+    for (const contact of newsList) {
       await setDoc(doc(db, 'contacts', contact.id), contact);
     }
   };
