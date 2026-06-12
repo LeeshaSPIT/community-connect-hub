@@ -233,6 +233,20 @@ export default function App() {
       ]
     };
 
+    try {
+      // 1. Try to save to Firebase
+      await setDoc(doc(db, 'contacts', fullContact.id), fullContact);
+      
+      // 2. If it succeeds, show it on the screen
+      setContacts(prev => [fullContact, ...prev]);
+      alert("Success! Suggestion saved to the database.");
+    } catch (error) {
+      // 3. If it fails, pop up an alert telling us why
+      console.error("Firebase Critical Error:", error);
+      alert("Database error! Check your Vercel Environment Variables or Firebase Rules.");
+    }
+  };
+
     await setDoc(doc(db, 'contacts', fullContact.id), fullContact);
     setContacts(prev => [fullContact, ...prev]);
   };
