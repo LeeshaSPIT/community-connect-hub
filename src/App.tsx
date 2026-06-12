@@ -50,7 +50,7 @@ export default function App() {
   };
 
   // Verification helper for user suggest contacts
-  const handleApproveContact = (id: string) => {
+  const handleApproveContact = async (id: string) => {
     const updated = contacts.map(c => {
       if (c.id === id) {
         return {
@@ -61,7 +61,11 @@ export default function App() {
       }
       return c;
     });
-    updateAndStoreContacts(updated);
+    const approvedContact = updated.find(c => c.id === id);
+    if (approvedContact) {
+      await setDoc(doc(db, 'contacts', approvedContact.id), approvedContact);
+    }
+    setContacts(updated);
   };
 
   // Full information editing submit handler for Deployer
@@ -143,9 +147,14 @@ export default function App() {
   }, []);
 
   // Save changes to localStorage on updating contacts list
-    const updateAndStoreContacts = async (newsList: Contact[]) => {
+  const updateAndStoreContacts = async (newsList: Contact[]) => {
     setContacts(newsList);
-    for (const contact of newsList) {
+    const changedContacts = newsList.filter(c =>
+      c.id.startsWith('usr-suggest-') ||
+      c.endorsements > 0 ||
+      c.reviews.length > 0
+    );
+    for (const contact of changedContacts) {
       await setDoc(doc(db, 'contacts', contact.id), contact);
     }
   };
