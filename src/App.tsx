@@ -69,14 +69,15 @@ export default function App() {
   };
 
   // Full information editing submit handler for Deployer
-  const handleEditContactSave = (updatedContact: Contact) => {
+  const handleEditContactSave = async (updatedContact: Contact) => {
     const updated = contacts.map(c => {
       if (c.id === updatedContact.id) {
         return updatedContact;
       }
       return c;
     });
-    updateAndStoreContacts(updated);
+    await setDoc(doc(db, 'contacts', updatedContact.id), updatedContact);
+    setContacts(updated);
     setEditingContact(null);
   };
   
@@ -109,7 +110,6 @@ export default function App() {
     }
   }, [neighborhood]);
 
-
   // Load initial dataset, merging with Firebase for shared state
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'contacts'), (snapshot) => {
@@ -122,15 +122,13 @@ export default function App() {
 
       const merged = [...INITIAL_CONTACTS];
       firebaseContacts.forEach(fc => {
-        if (!merged.some(c => c.id === fc.id)) {
+        const idx = merged.findIndex(c => c.id === fc.id);
+        if (idx === -1) {
+          // New contact from Firebase — add it
           merged.push(fc);
         } else {
-          const idx = merged.findIndex(c => c.id === fc.id);
-          merged[idx] = {
-            ...merged[idx],
-            endorsements: Math.max(merged[idx].endorsements || 0, fc.endorsements || 0),
-            reviews: [...merged[idx].reviews, ...(fc.reviews || []).filter(r => !merged[idx].reviews.some(fr => fr.id === r.id))]
-          };
+          // Existing contact — fully override with Firebase version
+          merged[idx] = { ...merged[idx], ...fc };
         }
       });
       setContacts(merged);
@@ -146,17 +144,9 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Save changes to localStorage on updating contacts list
+  // Save contact changes to Firebase
   const updateAndStoreContacts = async (newsList: Contact[]) => {
     setContacts(newsList);
-    const changedContacts = newsList.filter(c =>
-      c.id.startsWith('usr-suggest-') ||
-      c.endorsements > 0 ||
-      c.reviews.length > 0
-    );
-    for (const contact of changedContacts) {
-      await setDoc(doc(db, 'contacts', contact.id), contact);
-    }
   };
 
   const handleUpdateNeighborhood = (setting: NeighborhoodSetting) => {
@@ -174,7 +164,7 @@ export default function App() {
   };
 
   // 1. One-click endorsement increment (Trust layer)
-  const handleEndorse = (id: string) => {
+  const handleEndorse = async (id: string) => {
     const updated = contacts.map(c => {
       if (c.id === id) {
         return {
@@ -184,11 +174,15 @@ export default function App() {
       }
       return c;
     });
-    updateAndStoreContacts(updated);
+    const endorsedContact = updated.find(c => c.id === id);
+    if (endorsedContact) {
+      await setDoc(doc(db, 'contacts', endorsedContact.id), endorsedContact);
+    }
+    setContacts(updated);
   };
 
   // 2. Add custom review to contact (Neighbor Stars & comments)
-  const handleAddReview = (contactId: string, reviewData: Omit<Review, 'id' | 'date'>) => {
+  const handleAddReview = async (contactId: string, reviewData: Omit<Review, 'id' | 'date'>) => {
     const newReview: Review = {
       ...reviewData,
       id: `rev-gen-${Date.now()}`,
@@ -198,7 +192,6 @@ export default function App() {
     const updated = contacts.map(c => {
       if (c.id === contactId) {
         const newReviewsList = [newReview, ...c.reviews];
-        // Recalculate average rating
         const totalRating = newReviewsList.reduce((acc, r) => acc + r.rating, 0);
         const avgRating = parseFloat((totalRating / newReviewsList.length).toFixed(1));
 
@@ -211,19 +204,23 @@ export default function App() {
       }
       return c;
     });
-    updateAndStoreContacts(updated);
+    const reviewedContact = updated.find(c => c.id === contactId);
+    if (reviewedContact) {
+      await setDoc(doc(db, 'contacts', reviewedContact.id), reviewedContact);
+    }
+    setContacts(updated);
   };
 
   // 3. User registers a suggested provider contact (Crowdsourcing)
-  const handleAddContact = (newContactData: Omit<Contact, 'id' | 'rating' | 'ratingsCount' | 'endorsements' | 'reviews' | 'isVerified'>) => {
+  const handleAddContact = async (newContactData: Omit<Contact, 'id' | 'rating' | 'ratingsCount' | 'endorsements' | 'reviews' | 'isVerified'>) => {
     const fullContact: Contact = {
       ...newContactData,
       id: `usr-suggest-${Date.now()}`,
       rating: 5.0,
       ratingsCount: 1,
-      endorsements: 1, // Start with 1 automatic neighborhood endorsement
-      isVerified: false, // Flag as suggested rather than vetted society admin
-      isPendingApproval: true, // Suggestions start as pending approval
+      endorsements: 1,
+      isVerified: false,
+      isPendingApproval: true,
       reviews: [
         {
           id: `rev-init-${Date.now()}`,
@@ -236,7 +233,8 @@ export default function App() {
       ]
     };
 
-    updateAndStoreContacts([fullContact, ...contacts]);
+    await setDoc(doc(db, 'contacts', fullContact.id), fullContact);
+    setContacts(prev => [fullContact, ...prev]);
   };
 
   // Trigger outbound dialed call simulation
@@ -290,7 +288,6 @@ export default function App() {
     setTypedMessage('');
     setMerchantTyping(true);
 
-    // Simulate Merchant replying after 1.5 seconds!
     setTimeout(() => {
       let replyText = `Thanks for writing! Yes, I am currently available in ${neighborhood.societyName}. I can head over to your block shortly.`;
       if (activeWhatsApp.name.toLowerCase().includes('sharma')) {
@@ -729,18 +726,15 @@ export default function App() {
           </div>
           <div className="flex items-center space-x-2 text-[10px] text-slate-300 bg-slate-50 border border-slate-100 py-1 px-3.5 rounded-2xl">
             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-            <span>Always available offline • LocalStorage Client Cache Enabled</span>
+            <span>Always available • Firebase Cloud Sync Enabled</span>
           </div>
         </div>
       </footer>
 
-      {/* ========================================================
-          OUTBOUND CALL DIAL PHONE MOCK MODAL (Simulation Overlay)
-          ======================================================== */}
+      {/* OUTBOUND CALL DIAL PHONE MOCK MODAL */}
       {activeCall && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-[360px] h-[580px] bg-zinc-950 text-white rounded-[40px] shadow-2xl border-8 border-slate-900 flex flex-col justify-between p-8 select-none animate-in zoom-in-95 duration-150">
-            {/* Top info */}
             <div className="text-center pt-8 space-y-2">
               <span className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest block">Simulated Phone Call</span>
               <h2 className="text-lg font-bold tracking-tight text-white">{activeCall.name}</h2>
@@ -750,7 +744,6 @@ export default function App() {
               </span>
             </div>
 
-            {/* Virtual physical dial keyboard mock */}
             <div className="grid grid-cols-3 gap-6 max-w-xs mx-auto text-center">
               {[
                 { label: 'Mute', active: false }, { label: 'Keypad', active: false }, { label: 'Speaker', active: true },
@@ -767,7 +760,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* End call red trigger bottom */}
             <div className="flex justify-center pb-6">
               <button 
                 type="button"
@@ -781,13 +773,10 @@ export default function App() {
         </div>
       )}
 
-      {/* ========================================================
-          WHATSAPP CHAT SANDBOX PHONE MOCK MODAL (Simulation Overlay)
-          ======================================================== */}
+      {/* WHATSAPP CHAT SANDBOX PHONE MOCK MODAL */}
       {activeWhatsApp && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-[360px] h-[580px] bg-zinc-950 text-white rounded-[40px] shadow-2xl border-8 border-slate-900 flex flex-col justify-between overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* WhatsApp Header Customizer */}
             <div className="bg-zinc-900 border-b border-zinc-800 p-3.5 flex justify-between items-center shrink-0">
               <div className="flex items-center space-x-3 min-w-0">
                 <div className="w-9 h-9 rounded-full bg-emerald-700 border border-emerald-600 flex items-center justify-center text-xs font-black relative shrink-0">
@@ -799,7 +788,6 @@ export default function App() {
                   <span className="text-[9.5px] text-emerald-500 font-semibold">Online • Vendor</span>
                 </div>
               </div>
-
               <div className="flex items-center space-x-2">
                 <button 
                   onClick={() => setActiveWhatsApp(null)}
@@ -810,7 +798,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Chat message logs scroll area */}
             <div 
               className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-zinc-950 select-text"
               style={{
@@ -854,7 +841,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Fixed Chat Input Form */}
             <form onSubmit={handleSendWhatsAppMessage} className="bg-zinc-900 border-t border-zinc-800 p-3 flex gap-2 shrink-0 animate-in slide-in-from-bottom-2 duration-150">
               <input 
                 type="text"
@@ -874,9 +860,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ========================================================
-          DEPLOYER CONTACT EDITING OVERLAY MODAL
-          ======================================================== */}
+      {/* DEPLOYER CONTACT EDITING OVERLAY MODAL */}
       {editingContact && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
@@ -987,9 +971,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ========================================================
-          DEPLOYER PASSWORD VERIFICATION MODAL
-          ======================================================== */}
+      {/* DEPLOYER PASSWORD VERIFICATION MODAL */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
