@@ -6,6 +6,7 @@ import { Contact, NeighborhoodSetting, Review } from './types';
 import HomeTab from './components/HomeTab';
 import SearchTab from './components/SearchTab';
 import ContributeTab from './components/ContributeTab';
+import ApprovalsTab from './components/ApprovalsTab';
 import { Language, TRANSLATIONS } from './localization';
 import { 
   Phone, Users, Check, MessageSquare, CornerDownLeft, Sparkles, 
@@ -66,6 +67,15 @@ export default function App() {
       await setDoc(doc(db, 'contacts', approvedContact.id), approvedContact);
     }
     setContacts(updated);
+  };
+
+  // Reject/delete a pending contact
+  const handleRejectContact = async (id: string) => {
+    const confirmText = language === 'mr' ? 'हा संपर्क नाकारायचा आहे का?' : 'Reject and delete this suggested contact?';
+    if (window.confirm(confirmText)) {
+      await deleteDoc(doc(db, 'contacts', id));
+      setContacts(contacts.filter(c => c.id !== id));
+    }
   };
 
   // Full information editing submit handler for Deployer
@@ -639,6 +649,26 @@ export default function App() {
               <span className="hidden sm:inline">{TRANSLATIONS[language]['nav.suggest'] || "Suggest Provider"}</span>
               <span className="inline sm:hidden">{language === 'mr' ? 'सुचवा' : 'Suggest'}</span>
             </button>
+
+            {role === 'deployer' && (
+              <button
+                onClick={() => setActiveTab('approvals')}
+                className={`relative flex items-center justify-center space-x-1 sm:space-x-2 px-2.5 sm:px-4 py-2 rounded-xl transition-all text-xs sm:text-sm font-black uppercase tracking-wider flex-1 md:flex-initial cursor-pointer ${
+                  activeTab === 'approvals'
+                    ? 'text-amber-600 bg-white shadow-sm scale-[1.02]'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <ShieldAlert size={15} />
+                <span className="hidden sm:inline">{language === 'mr' ? 'मंजुरी' : 'Approvals'}</span>
+                <span className="inline sm:hidden">{language === 'mr' ? 'मंजुरी' : 'Approvals'}</span>
+                {contacts.filter(c => c.isPendingApproval).length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {contacts.filter(c => c.isPendingApproval).length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Current Connected Residential Base Indicator */}
@@ -725,6 +755,16 @@ export default function App() {
             role={role}
             onApproveContact={handleApproveContact}
             onEditContact={setEditingContact}
+          />
+        )}
+
+        {activeTab === 'approvals' && role === 'deployer' && (
+          <ApprovalsTab
+            contacts={contacts}
+            onApproveContact={handleApproveContact}
+            onRejectContact={handleRejectContact}
+            onEditContact={setEditingContact}
+            language={language}
           />
         )}
 
