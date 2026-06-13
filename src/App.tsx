@@ -899,8 +899,8 @@ export default function App() {
       {/* DEPLOYER CONTACT EDITING OVERLAY MODAL */}
       {editingContact && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center mb-4">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[95vh] overflow-y-auto custom-scrollbar">
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2 z-10">
               <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center space-x-2">
                 <Layers size={18} className="text-amber-500" />
                 <span>{TRANSLATIONS[language]['admin.modal_title'] || "Edit Provider Information"}</span>
@@ -920,6 +920,7 @@ export default function App() {
               }}
               className="space-y-4"
             >
+              {/* NAME FIELD */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                   {TRANSLATIONS[language]['admin.label_name'] || "Shop / Professional Name"}
@@ -933,6 +934,7 @@ export default function App() {
                 />
               </div>
 
+              {/* PHONE FIELD */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                   {TRANSLATIONS[language]['admin.label_phone'] || "Direct Phone Contact"}
@@ -942,6 +944,64 @@ export default function App() {
                   value={editingContact.phone}
                   onChange={(e) => setEditingContact({ ...editingContact, phone: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                  required
+                />
+              </div>
+
+              {/* HOURS & LOCATION GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                    {TRANSLATIONS[language]['admin.label_hours'] || "Operating Timing Hours"}
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editingContact.hours || ''}
+                    onChange={(e) => setEditingContact({ ...editingContact, hours: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                    placeholder="e.g. 9 AM - 8 PM"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                    {TRANSLATIONS[language]['admin.label_address'] || "Shop Location Address"}
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editingContact.address || ''}
+                    onChange={(e) => setEditingContact({ ...editingContact, address: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                    placeholder="e.g. Shop No. 5, Phase 1"
+                  />
+                </div>
+              </div>
+
+              {/* PHOTO / IMAGE URL */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  {language === 'mr' ? 'फोटो / इमेज URL' : 'Photo / Image URL'}
+                </label>
+                <input 
+                  type="text" 
+                  value={editingContact.image || ''}
+                  onChange={(e) => setEditingContact({ ...editingContact, image: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                  placeholder="https://images.unsplash.com/..."
+                />
+              </div>
+
+              {/* SPECIALITIES / DETAILS TEXTAREA */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  {TRANSLATIONS[language]['admin.label_details'] || "Specialities or Highlights"}
+                </label>
+                <textarea 
+                  value={editingContact.details || ''}
+                  rows={3}
+                  onChange={(e) => setEditingContact({ ...editingContact, details: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all resize-none"
+                  placeholder="Describe your services..."
                   required
                 />
               </div>
