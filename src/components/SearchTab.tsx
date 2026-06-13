@@ -27,6 +27,7 @@ export default function SearchTab({
 }: SearchTabProps) {
   const [query, setQuery] = useState('');
   const [onlyHighRated, setOnlyHighRated] = useState(false);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   // Quick suggestion tags we can search directly
   const suggestionTags = ['Leak', 'Medicine', 'ATM', 'Laundry', 'Car Wash', 'Plumber', 'Raddi'];
@@ -201,7 +202,8 @@ export default function SearchTab({
                             src={contact.image} 
                             alt={contact.name}
                             referrerPolicy="no-referrer"
-                            className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm mt-0.5"
+                            className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm mt-0.5 cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200"
+                            onClick={() => setExpandedImage(contact.image)}
                           />
                         ) : (
                           <div className={`w-12 h-12 rounded-xl shrink-0 border mt-0.5 flex items-center justify-center font-black text-xs shadow-xs ${
@@ -291,7 +293,22 @@ export default function SearchTab({
           </div>
         )}
       </div>
-
+        {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 backdrop-blur-xs p-4"
+          onClick={() => setExpandedImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2 rounded-xl text-sm font-bold transition-all backdrop-blur-md cursor-pointer"
+            onClick={() => setExpandedImage(null)}
+          >
+            ✕ Close View
+          </button>
+          <div className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img src={expandedImage} alt="Expanded view" className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
