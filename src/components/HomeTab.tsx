@@ -107,6 +107,7 @@ export default function HomeTab({
     { id: 'repair', label: TRANSLATIONS[language]['cat.repair'] || 'Repair & Fix', color: 'indigo', text: TRANSLATIONS[language]['cat.desc.repair'] || 'Household maintenance', icon: Wrench, activeBg: 'bg-indigo-50/50 border-indigo-400 text-indigo-950 shadow-indigo-100/50' },
     { id: 'daily', label: TRANSLATIONS[language]['cat.daily'] || 'Daily Shops', color: 'amber', text: TRANSLATIONS[language]['cat.desc.daily'] || 'Groceries & medicines', icon: Store, activeBg: 'bg-amber-50/50 border-amber-400 text-amber-950 shadow-amber-100/50' },
     { id: 'personal', label: TRANSLATIONS[language]['cat.personal'] || 'Lifestyle & Home', color: 'emerald', text: TRANSLATIONS[language]['cat.desc.personal'] || 'Support & assistance', icon: Sparkles, activeBg: 'bg-emerald-50/50 border-emerald-400 text-emerald-950 shadow-emerald-100/50' },
+    { id: 'nearby', label: TRANSLATIONS[language]['cat.nearby'] || 'General Stores', color: 'blue', text: TRANSLATIONS[language]['cat.desc.nearby'] || 'ATMs, parks & transport', icon: MapPin, activeBg: 'bg-blue-50/50 border-blue-400 text-blue-950 shadow-blue-100/50' },
     { id: 'emergency', label: TRANSLATIONS[language]['cat.emergency'] || 'Emergency Help', color: 'rose', text: TRANSLATIONS[language]['cat.desc.emergency'] || 'SOS helplines & safety', icon: ShieldAlert, activeBg: 'bg-rose-50/50 border-rose-400 text-rose-950 shadow-rose-100/50 mr-0' }
   ];
 
