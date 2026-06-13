@@ -69,19 +69,8 @@ export default function App() {
   };
 
   // Full information editing submit handler for Deployer
+  // Full information editing submit handler for Deployer
   const handleEditContactSave = async (updatedContact: Contact) => {
-    // Permanent record deletion action for Deployers
-    const handleDeleteContact = async (id: string) => {
-    const confirmationText = language === 'mr' 
-      ? 'तुम्हाला खात्री आहे की तुम्ही हा संपर्क हटवू इच्छिता?' 
-      : 'Are you sure you want to delete this contact permanently?';
-      
-    if (window.confirm(confirmationText)) {
-      await deleteDoc(doc(db, 'contacts', id));
-      setContacts(contacts.filter(c => c.id !== id));
-      setEditingContact(null);
-    }
-  };
     const updated = contacts.map(c => {
       if (c.id === updatedContact.id) {
         return updatedContact;
@@ -91,6 +80,19 @@ export default function App() {
     await setDoc(doc(db, 'contacts', updatedContact.id), updatedContact);
     setContacts(updated);
     setEditingContact(null);
+  };
+
+  // Permanent record deletion action for Deployers
+  const handleDeleteContact = async (id: string) => {
+    const confirmationText = language === 'mr' 
+      ? 'तुम्हाला खात्री आहे की तुम्ही हा संपर्क हटवू इच्छिता?' 
+      : 'Are you sure you want to delete this contact permanently?';
+      
+    if (window.confirm(confirmationText)) {
+      await deleteDoc(doc(db, 'contacts', id));
+      setContacts(contacts.filter(c => c.id !== id));
+      setEditingContact(null);
+    }
   };
   
   // Neighborhood profile settings state
