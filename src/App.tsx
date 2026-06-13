@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
-import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { INITIAL_CONTACTS } from './data';
 import { Contact, NeighborhoodSetting, Review } from './types';
 import HomeTab from './components/HomeTab';
@@ -10,7 +10,7 @@ import { Language, TRANSLATIONS } from './localization';
 import { 
   Phone, Users, Check, MessageSquare, CornerDownLeft, Sparkles, 
   AlertCircle, X, CheckSquare, Heart, MapPin, Search, PlusCircle, Home, HelpCircle,
-  ShieldAlert, Layers, Lock, CheckCircle2
+  ShieldAlert, Layers, Lock, CheckCircle2, Trash2
 } from 'lucide-react';
 
 export default function App() {
@@ -70,6 +70,18 @@ export default function App() {
 
   // Full information editing submit handler for Deployer
   const handleEditContactSave = async (updatedContact: Contact) => {
+    // Permanent record deletion action for Deployers
+    const handleDeleteContact = async (id: string) => {
+    const confirmationText = language === 'mr' 
+      ? 'तुम्हाला खात्री आहे की तुम्ही हा संपर्क हटवू इच्छिता?' 
+      : 'Are you sure you want to delete this contact permanently?';
+      
+    if (window.confirm(confirmationText)) {
+      await deleteDoc(doc(db, 'contacts', id));
+      setContacts(contacts.filter(c => c.id !== id));
+      setEditingContact(null);
+    }
+  };
     const updated = contacts.map(c => {
       if (c.id === updatedContact.id) {
         return updatedContact;
@@ -885,7 +897,7 @@ export default function App() {
       {/* DEPLOYER CONTACT EDITING OVERLAY MODAL */}
       {editingContact && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center space-x-2">
                 <Layers size={18} className="text-amber-500" />
@@ -932,60 +944,33 @@ export default function App() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                    {TRANSLATIONS[language]['admin.label_hours'] || "Operating Timing Hours"}
-                  </label>
-                  <input 
-                    type="text" 
-                    value={editingContact.hours || ''}
-                    onChange={(e) => setEditingContact({ ...editingContact, hours: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
-                    placeholder="e.g. 9 AM - 7 PM"
-                  />
+              {/* ACTION CONTROL BUTTON CONTAINER */}
+              <div className="flex flex-col space-y-2 pt-2">
+                <div className="flex space-x-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setEditingContact(null)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    {TRANSLATIONS[language]['switch.cancel'] || "Cancel"}
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-100 cursor-pointer"
+                  >
+                    {TRANSLATIONS[language]['admin.save'] || "Save Changes"}
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                    {TRANSLATIONS[language]['admin.label_address'] || "Shop Location Address"}
-                  </label>
-                  <input 
-                    type="text" 
-                    value={editingContact.address || ''}
-                    onChange={(e) => setEditingContact({ ...editingContact, address: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
-                    placeholder="e.g. Shop 4, Sector B"
-                  />
-                </div>
-              </div>
+                <div className="border-t border-slate-100 my-1 pt-1" />
 
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                  {TRANSLATIONS[language]['admin.label_details'] || "Specialities or Highlights"}
-                </label>
-                <textarea 
-                  value={editingContact.details || ''}
-                  rows={3}
-                  onChange={(e) => setEditingContact({ ...editingContact, details: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-100 mt-0.5 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
-                  required
-                />
-              </div>
-
-              <div className="flex space-x-2 pt-2">
                 <button 
-                  type="button" 
-                  onClick={() => setEditingContact(null)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                  type="button"
+                  onClick={() => handleDeleteContact(editingContact.id)}
+                  className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center space-x-2 shadow-xs"
                 >
-                  {TRANSLATIONS[language]['switch.cancel'] || "Cancel"}
-                </button>
-                <button 
-                  type="submit" 
-                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-100 cursor-pointer"
-                >
-                  {TRANSLATIONS[language]['admin.save'] || "Save Changes"}
+                  <Trash2 size={13} />
+                  <span>{language === 'mr' ? 'संपर्क कायमचा हटवा' : 'Delete Contact Permanently'}</span>
                 </button>
               </div>
             </form>
