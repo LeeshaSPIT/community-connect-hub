@@ -31,17 +31,60 @@ export default function ContributeTab({
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false); // Added submission state
 
-  // File to base64 conversion
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
+  // File to base64 conversion : not needed now.
+  // Replace with this clean, client-side compression function
+const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    
+    // 1. Read the original file
+    reader.onload = (event) => {
+      const img = new Image();
+      
+      // 2. Once the image metadata loads, canvas takes over
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Set maximum dimensions for the directory grid display
+        const MAX_WIDTH = 400;
+        const MAX_HEIGHT = 400;
+
+        // Maintain the aspect ratio so the image doesn't stretch or skew
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // 3. Redraw the picture onto the smaller layout
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // 4. Export it as a low-overhead JPEG compressed at 60% quality
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          setImage(compressedBase64);
+        }
       };
-      reader.readAsDataURL(file);
-    }
-  };
+      
+      img.src = event.target?.result as string;
+    };
+    
+    reader.readAsDataURL(file);
+  }
+};
 
   // Subcategory suggestions depending on Category
   const subcategorySuggestions: { [key in CategoryType]?: string[] } = {
